@@ -9,37 +9,43 @@ DISCLAIMER: The following thought experiment is highly idealized, and only reall
 
 # Motivation
 
-A few weeks ago I was taking a shower when I had an idea about the electoral process in the united states. There's been a lot of discussion about the role of money in politics, and it got me thinking about the kinds of tangible incentives that do and don't motivate politicians to varying degrees. This brought me to the question: is there a way we could construct a system such that bringing about positive outcomes is directly incentivized? 
+A few weeks ago I was taking a shower when I had an idea about the US electoral process. There's been a lot of discussion about the role of money in politics, and it got me thinking about the kinds of tangible incentives that do and don't motivate politicians to varying degrees. This brought me to the question: is there a way we could construct a system such that bringing about positive outcomes is directly incentivized? 
 
 # The Idea
 
-There are people who are well informed and vote intelligently to bring about positive outcomes. There are people who are poorly informed and whose voting behavior could be modelled by a coin flip. And there are people who are mis-informed and who consistently vote in opposition to their best interest. These different types of people are distributed in some way across the population. If we could somehow favor the votes of the more informed population over the ill or misinformed electorate, we could essentially assure positive outcomes. Additionally, politicians would have a tangible incentive to bring about positive outcomes, because to do otherwise would disenfranchise their electorate and make it much harder for them to be re-elected.
+There are people who are well informed and vote intelligently to bring about positive outcomes. There are people who are poorly informed and whose voting behavior could be modelled by a coin flip. And there are people who are mis-informed and who consistently vote in opposition to their own best interest. These different types of people are distributed in some way across the population. If we could somehow favor the votes of the more informed population over the ill or misinformed electorate, we could essentially assure positive outcomes. Additionally, politicians would have a tangible incentive to bring about positive outcomes, because to do otherwise would disenfranchise their electorate and make it much harder for them to be re-elected.
 
-Can we learn a model that increases the probability of good outcomes by increasing the voting power of certain voters?
+If we can increase the voting power of the "better" voters, we could potentially increase the probability of positive electoral outcomes.
 
 # The model
 
-Let's assume first that there is some objective way of measuring whether or not an election had a positive outcome. Maybe this would be a function of the status of the economy, or peace, or human wellfare. It really doesn't matter: just imagine that such an objective metric could feasibly constructed (it probablyalmost certainly cannot). WIth such a metric defined, we could determine whether or not individual citizen's votes contributed to a positive outcome or not. Let's further assume that an individual's voting behavior can be reasonably modeled by the probability that their vote will contribute to a positive outcome, as measured by our imaginary metric. 
+Let's assume first that there is some objective way of measuring whether or not an election had a positive outcome. Maybe this would be a function of the status of the economy, or peace, or human wellfare. It really doesn't matter: this is a thought experiment. Just imagine that such an objective metric could feasibly constructed (it probably/almost certainly cannot). 
 
-Each voter can be thought of as a classification model, and the probability of a voter contributing to a positive outcome can be thought of as the model accuracy. The election is then an ensemblificiation of our classifiers using a simple average to combine the respective classificaitons. The hypothesis asserted in the previous section is that there is a way to learn a set of weights that will increase the accuracy of our ensemble by using a *weighted* average in place of a simple average. 
+With such a metric defined, we could determine whether or not an individual citizen's vote contributed to a positive outcome or not. Let's further assume that an individual's voting behavior can be reasonably modeled by the probability that their vote will contribute to a positive outcome, as measured by our imaginary metric. 
+
+Each voter can be thought of as a classification model that tries to classify an electoral candidate as worthy of their vote or not. The probability of a voter contributing to a positive outcome can be thought of as the model's accuracy. The election is then an ensemblificiation of our classifiers using a simple average to combine the respective classificaitons. Our goal is to learn a set of weights that will increase the accuracy of our ensemble by using a *weighted* average in place of a simple average. 
 
 If we had access to each model's true (fixed) accuracy, we could optimize these weights deterministically. But since we don't, we'll have to use a stochastic approach.
 
-To complicate matters further, our models are transitive: old voters die and are replaced by young voters whose accuracy does not necessarily match the voter they are replacing. So we need to perpetually update out model weights. Therefore, an incremental approach is called for. 
+To complicate matters further, our "models"" are ephemeral: old voters die and are replaced by young voters whose accuracy does not necessarily match the voter they are replacing. So we need to perpetually update our model weights. Therefore, an incremental approach is called for.
 
 For simplicity, let's assume that the percentage of voter churn is fixed, and that new voters are generated from the same probability distribution as the voters they are replacing. 
 
-# Simulation
+# Election Simulation
 
 Let's start by defining the variables on which our simulation will depend.
 
-* **Population size** - We can adjust this all we want, but once it's large enough it shouldn't really have much if any effect on our simulations. In any event, it's a parameter and so should be attached to a variable instead of being fixed. It's generally a good practice to avoid hardcoding "magic numbers" into your simulations.
-* **Voter accuracy distribution** - This will determine who the members of our population are. A good distribution for modeling distributions of probabilities is the *Beta* distribution, so that's what I'll be using. This distribution takes two "shape" parameters, $\alpha$ and $\beta$, so we'll include these as separate variables in our model.
-* **Population churn rate** Essentially a simplified mortality rate for our voting population. Will affect how long we have to learn the weights for an individual, so more churn means slower learning rates will produce much less valuable models.
-* **Learning rate** how much we allow our model to change during each iteration. The effect of the learning rate is going to be balanced by the population churn as described above.
-* **Number of elections** - How many sequential elections will we simulate?
+* **Population size** - We can adjust this all we want, but once it's large enough it shouldn't really have much if any effect on our simulations.
 
-Let's start with a population of 1000, a 10% mortality rate, a slow learning rate, 10 elections, and a distribution of voters that puts most people in the middle with a few really intelligent voters and a few really terrible voters:
+* **Voter accuracy distribution** - This will determine who the members of our population are. Each voter either contributes to a positive outcome or does not, so they're vote can be treated as bernoulli trial. The voter generates trial outcomes subject to some probability (which is how we will encode how informed a voter they are). A great way to model a distribution over a particular distribution's parameters is via its [conjugate distribution](https://en.wikipedia.org/wiki/Conjugate_prior#Table_of_conjugate_distributions). In our case, the bernoulli/binomial distributions are conjugate to the [*Beta* distribution](https://en.wikipedia.org/wiki/Beta_distribution), which takes two "shape" parameters, $\alpha$ and $\beta$, so we'll enumerate these as inputs to the simulation.
+
+* **Learning rate** how much we allow our model (i.e. the collection of voter weights) to change during each iteration. The effect of the learning rate is going to be balanced by the "population churn rate"" described below.
+
+* **Population churn rate** Essentially a combined birth/mortality rate for our voting population, which for simplicity purposes we assume to be at a population equilibrium. This will affect how long we are able to learn the weights for an individual (i.e. before they "die" in the simulation), which in turn affects how close a given individual's weight can get to convergence. Higher churn means individual's will exit the model farther from convergence, so slow learning rates will be less effective.
+
+* **Number of elections** - How many sequential elections will we simulate? This is equivalent to the number of simulation iterations/generations.
+
+Let's start with a population of 1000, a 10% churn rate, a slow learning rate, 10 elections, and a distribution of voters that puts most people in the middle with a few really intelligent voters and a few really terrible voters:
 
 ```{r}
 pop_size = 1e3
